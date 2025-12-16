@@ -179,21 +179,25 @@ def pretty_model(m: str) -> str:
     return {"arima":"ARIMA","xgboost":"XGBoost","gru":"GRU","lstm":"LSTM","transformer":"Transformer"}.get(m.lower(), m)
 
 
-def build_table(store: Dict[Tuple[str, int, str], List[dict]], gran_key: str, step: int, models: List[str]) -> pd.DataFrame:
+def build_table_city(
+    store: Dict[Tuple[str, str, int, str], dict],
+    city: str,
+    gran_key: str,
+    step: int,
+    models: List[str]
+) -> pd.DataFrame:
     """
-    Assemble a metrics table for a given granularity and block length across models.
-    Each cell is the average across cities (nanmean).
+    Assemble a metrics table for a given (city, granularity, block length) across models.
+    Each cell is that city's metrics.
     """
     rows = ["StationMAE","StationRMSE","RegionMAE","RegionRMSE","CityMAE","CityRMSE"]
     data = {}
     for m in models:
-        lst = store.get((gran_key, step, m), [])
-        vals = {r: np.nan for r in rows}
-        if lst:
-            for r in rows:
-                arr = np.array([d.get(r, np.nan) for d in lst], dtype=float)
-                vals[r] = float(np.nanmean(arr)) if np.isfinite(arr).any() else np.nan
-        data[pretty_model(m)] = [vals[r] for r in rows]
+        d = store.get((city, gran_key, step, m), None)
+        if d is None:
+            data[pretty_model(m)] = [np.nan] * len(rows)
+        else:
+            data[pretty_model(m)] = [float(d.get(r, np.nan)) for r in rows]
     return pd.DataFrame(data, index=rows)
 
 
@@ -212,15 +216,13 @@ def main():
     """
     1) Load per-(city, model, gran) predictions
     2) Compute metrics on block MEANS for each requested window.
-    3) Print pretty tables (avg across cities).
-    4) Save exactly the three combined CSVs (min/hour/day) with summarized metrics.
+    3) Print pretty tables.
+    4) Save combined CSVs (min/hour/day) PER CITY (so 12 files total).
     """
-    # store[(gran, step, model)] -> list of per-city metrics dicts
-    store: Dict[Tuple[str, int, str], List[dict]] = {
-        (g, s, m): [] for g, steps in BLOCKS.items() for s in steps for m in MODEL_LIST
-    }
+    # store[(city, gran, step, model)] -> metrics dict for that city/model/gran/window
+    store: Dict[Tuple[str, str, int, str], dict] = {}
 
-    # ---- Evaluate across cities -> per-(gran, step) summary tables ----
+    # ---- Evaluate per city ----
     for city in CITY_LIST:
         for model in MODEL_LIST:
             for gran, steps in BLOCKS.items():
@@ -230,37 +232,42 @@ def main():
                 for block in steps:
                     try:
                         metrics = evaluate_one(df, block)
-                        store[(gran, block, model)].append(metrics)
+                        store[(city, gran, block, model)] = metrics
                     except Exception as e:
                         print(f"[SKIP] {city}/{model}/{gran} step={block}: {e}")
 
     fmt = lambda x: "NaN" if pd.isna(x) else f"{x:.{PRINT_DECIMALS}f}"
 
-    # Pretty print per-window tables
-    for gran, steps in BLOCKS.items():
-        for step in steps:
-            table = build_table(store, gran, step, MODEL_LIST)
-            print(f"\n=== {gran.upper()} metrics — block MEAN over {_window_label(gran, step)} (avg across cities) ===")
-            print(table.to_string(float_format=fmt))
+    # Pretty print per-window tables (PER CITY)
+    for city in CITY_LIST:
+        for gran, steps in BLOCKS.items():
+            for step in steps:
+                table = build_table_city(store, city, gran, step, MODEL_LIST)
+                print(f"\n=== {city.upper()} — {gran.upper()} metrics — block MEAN over {_window_label(gran, step)} ===")
+                print(table.to_string(float_format=fmt))
 
-    # Save exactly 3 combined CSVs (no PKLs, no per-window files)
+    # Save combined CSVs PER CITY
     outdir = PROJECT_DIR / "results" / "summaries"
     outdir.mkdir(parents=True, exist_ok=True)
-    for gran in ["min", "hour", "day"]:
-        rows = ["StationMAE","StationRMSE","RegionMAE","RegionRMSE","CityMAE","CityRMSE"]
-        pieces = []
-        col_tuples = []
-        for m in MODEL_LIST:
-            for step in BLOCKS[gran]:
-                t = build_table(store, gran, step, [m])  # single-column table
-                pieces.append(t)
-                label = f"{step*10}m" if gran == "min" else (f"{step}h" if gran == "hour" else f"{step}d")
-                col_tuples.append((pretty_model(m), label))
-        if pieces:
-            wide = pd.concat(pieces, axis=1)
-            wide.columns = pd.MultiIndex.from_tuples(col_tuples, names=["Model","Window"])
-            wide = wide.loc[rows]
-            wide.to_csv(outdir / f"metrics_{gran}_combined.csv")
+
+    rows = ["StationMAE","StationRMSE","RegionMAE","RegionRMSE","CityMAE","CityRMSE"]
+
+    for city in CITY_LIST:
+        for gran in ["min", "hour", "day"]:
+            pieces = []
+            col_tuples = []
+            for m in MODEL_LIST:
+                for step in BLOCKS[gran]:
+                    t = build_table_city(store, city, gran, step, [m])  # single-column table
+                    pieces.append(t)
+                    label = f"{step*10}m" if gran == "min" else (f"{step}h" if gran == "hour" else f"{step}d")
+                    col_tuples.append((pretty_model(m), label))
+            if pieces:
+                wide = pd.concat(pieces, axis=1)
+                wide.columns = pd.MultiIndex.from_tuples(col_tuples, names=["Model", "Window"])
+                wide = wide.loc[rows]
+                wide.to_csv(outdir / f"metrics_{gran}_combined_{city}.csv")
+
 
 if __name__ == "__main__":
     main()
