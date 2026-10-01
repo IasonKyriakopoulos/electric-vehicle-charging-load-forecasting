@@ -1,7 +1,12 @@
 # Electric Vehicle Charging Load Forecasting: An Experimental Comparison of Machine Learning Methods
 
-This repository accompanies the paper "Electric Vehicle Charging Load Forecasting: An Experimental Comparison of Machine Learning Methods" (I. Kyriakopoulos, Y. Theodoridis, 2025).
-It provides all code, configuration, and processed data necessary to reproduce the experiments.
+This repository accompanies the paper:
+
+**I. Kyriakopoulos and Y. Theodoridis, "Electric Vehicle Charging Load Forecasting: An Experimental Comparison of Machine Learning Methods" (2026).**
+
+**Paper:** [arXiv:2512.17257](https://arxiv.org/abs/2512.17257)
+
+It provides the code, configuration, and instructions required to reproduce the experimental pipeline and regenerate the processed datasets used in the study.
 
 ---
 
@@ -77,7 +82,8 @@ This script automatically:
 - Computes metrics and saves results under the "results/" directory
 
 Note:
-The original experiments were executed in a Singularity container on a university GPU cluster to ensure consistent CUDA and TensorFlow versions, but the above commands reproduce the same results on any standard Python setup.
+The original experiments were executed in a Singularity container on a university GPU cluster to ensure consistent CUDA and TensorFlow versions.
+The commands above reproduce the experimental workflow on a compatible Python environment. Exact numerical results may vary slightly across hardware, TensorFlow, and CUDA configurations.
 
 ---
 
@@ -86,5 +92,4 @@ The original experiments were executed in a Singularity container on a universit
 If you use this code or reproduce these results, please cite:
 
 I. Kyriakopoulos, Y. Theodoridis,
-"Electric Vehicle Charging Load Forecasting: An Experimental Comparison of Machine Learning Methods", 2025.
-(Submitted for publication.)
+"Electric Vehicle Charging Load Forecasting: An Experimental Comparison of Machine Learning Methods", 2026.
