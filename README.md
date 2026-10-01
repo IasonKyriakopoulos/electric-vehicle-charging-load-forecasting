@@ -2,7 +2,7 @@
 
 This repository accompanies the paper:
 
-**I. Kyriakopoulos and Y. Theodoridis, "Electric Vehicle Charging Load Forecasting: An Experimental Comparison of Machine Learning Methods" (2026).**
+**I. Kyriakopoulos and Y. Theodoridis, "Electric Vehicle Charging Load Forecasting: An Experimental Comparison of Machine Learning Methods" (2025).**
 
 **Paper:** [arXiv:2512.17257](https://arxiv.org/abs/2512.17257)
 
@@ -92,4 +92,4 @@ The commands above reproduce the experimental workflow on a compatible Python en
 If you use this code or reproduce these results, please cite:
 
 I. Kyriakopoulos, Y. Theodoridis,
-"Electric Vehicle Charging Load Forecasting: An Experimental Comparison of Machine Learning Methods", 2026.
+"Electric Vehicle Charging Load Forecasting: An Experimental Comparison of Machine Learning Methods", 2025.
